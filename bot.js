@@ -1,91 +1,127 @@
 const express = require('express');
-const cors = require('cors');
-const { search, ytmp3, ytmp4, ytdlv2, channel } = require('@vreden/youtube_scraper');
-
+const scraper = require('@danitech/scraper');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Middlewares
-app.use(cors());
+// Middleware para parsear JSON
 app.use(express.json());
 
-// Ruta de búsqueda
-app.get('/search', (req, res) => {
-    const query = req.query.query;
-    if (!query) return res.status(400).json({ error: 'Parámetro query requerido' });
-
-    search(query)
-        .then(result => {
-            result.status 
-                ? res.json(result.results)
-                : res.status(500).json({ error: result.result });
-        })
-        .catch(error => res.status(500).json({ error: error.message }));
+// Manejar CORS (opcional)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
 });
 
-// Ruta para obtener información de canal
-app.get('/channel', (req, res) => {
-    const query = req.query.query;
-    if (!query) return res.status(400).json({ error: 'Parámetro query requerido' });
+// Descargar video de YouTube
+app.get('/download/youtube', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) return res.status(400).json({ error: 'URL parameter is required' });
 
-    channel(query)
-        .then(result => {
-            result.status 
-                ? res.json(result.results)
-                : res.status(500).json({ error: result.result });
-        })
-        .catch(error => res.status(500).json({ error: error.message }));
-});
-
-// Ruta para descargar MP3
-app.get('/ytmp3', (req, res) => {
-    const url = req.query.url;
-    const quality = req.query.quality || '128';
+    const response = await scraper.downloader.youtube_video(url);
+    if (!response.ok) throw new Error('Failed to fetch video data');
     
-    if (!url) return res.status(400).json({ error: 'Parámetro URL requerido' });
+    const data = await response.json();
+    if (!data.data) return res.status(404).json({ status: 'Error', code: 404, message: 'Data not found!' });
 
-    ytmp3(url, quality)
-        .then(result => {
-            result.status 
-                ? res.json(result)
-                : res.status(500).json({ error: result.result });
-        })
-        .catch(error => res.status(500).json({ error: error.message }));
+    res.json({
+      status: 'Success',
+      code: 200,
+      author: 'Dani Techno.',
+      data: data.data
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Ruta para descargar MP4
-app.get('/ytmp4', (req, res) => {
-    const url = req.query.url;
-    const quality = req.query.quality || '360';
-    
-    if (!url) return res.status(400).json({ error: 'Parámetro URL requerido' });
+// Buscar letras de canciones
+app.get('/search/lyrics', async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query) return res.status(400).json({ error: 'Query parameter is required' });
 
-    ytmp4(url, quality)
-        .then(result => {
-            result.status 
-                ? res.json(result)
-                : res.status(500).json({ error: result.result });
-        })
-        .catch(error => res.status(500).json({ error: error.message }));
+    const response = await scraper.searcher.lyrics(query);
+    if (!response.ok) throw new Error('Failed to fetch lyrics');
+    
+    const data = await response.json();
+    res.json({
+      status: 'Success',
+      code: 200,
+      author: 'Dani Techno.',
+      data: data.data
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Ruta para ytdlv2 (versión avanzada)
-app.get('/ytdlv2', (req, res) => {
-    const url = req.query.url;
-    const quality = req.query.quality;
+// Obtener imagen random de waifu (SFW)
+app.get('/anime/sfw/waifu', async (req, res) => {
+  try {
+    const response = await scraper.random_image_anime_sfw.waifu();
+    if (!response.ok) throw new Error('Failed to fetch image');
     
-    if (!url) return res.status(400).json({ error: 'Parámetro URL requerido' });
+    const data = await response.json();
+    res.json({
+      status: 'Success',
+      code: 200,
+      author: 'Dani Techno.',
+      data: data.data
+    });
 
-    ytdlv2(url, quality)
-        .then(result => {
-            result.status 
-                ? res.json(result)
-                : res.status(500).json({ error: result.result });
-        })
-        .catch(error => res.status(500).json({ error: error.message }));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Herramientas: Codificar Base64
+app.get('/tools/base64/encode', (req, res) => {
+  try {
+    const { text } = req.query;
+    if (!text) return res.status(400).json({ error: 'Text parameter is required' });
+
+    const encoded = scraper.tools.base64_encode(text);
+    res.json({
+      status: 'Success',
+      code: 200,
+      author: 'Dani Techno.',
+      data: encoded
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Herramientas: Decodificar Base64
+app.get('/tools/base64/decode', (req, res) => {
+  try {
+    const { text } = req.query;
+    if (!text) return res.status(400).json({ error: 'Text parameter is required' });
+
+    const decoded = scraper.tools.base64_decode(text);
+    res.json({
+      status: 'Success',
+      code: 200,
+      author: 'Dani Techno.',
+      data: decoded
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Manejador de rutas no encontradas
+app.use((req, res) => {
+  res.status(404).json({ error: 'Endpoint not found' });
 });
 
 // Iniciar servidor
 app.listen(port, () => {
-    console.log(`API corriendo en http://localhost:${port}`);
+  console.log(`API escuchando en http://localhost:${port}`);
 });
