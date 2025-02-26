@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>FileHost - Subir archivos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            text-align: center;
+        }
+        .upload-box {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 2rem;
+            margin: 2rem 0;
+            cursor: pointer;
+        }
+        #file-input {
+            display: none;
+        }
+        .upload-button {
+            background: #4CAF50;
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #file-list {
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>FileHost</h1>
+    <p>Subida simple y privada de archivos</p>
+    
+    <div class="upload-box" id="drop-zone">
+        <p>Arrastra archivos aquí o haz clic para seleccionar</p>
+        <input type="file" id="file-input" multiple>
+        <button class="upload-button" onclick="document.getElementById('file-input').click()">
+            Seleccionar archivos
+        </button>
+    </div>
+    
+    <p>Tamaño máximo: 256MB</p>
+    <div id="file-list"></div>
+    
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        
+        // Manejar arrastrar y soltar
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#4CAF50';
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.borderColor = '#ccc';
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#ccc';
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+
+        // Manejar selección de archivos
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        async function handleFiles(files) {
+            const formData = new FormData();
+            for (const file of files) {
+                formData.append('files', file);
+            }
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    let html = '<h3>Archivos subidos:</h3>';
+                    data.urls.forEach(url => {
+                        html += `<p><a href="${url}" target="_blank">${url}</a></p>`;
+                    });
+                    document.getElementById('file-list').innerHTML = html;
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error de conexión');
+            }
+        }
+    </script>
+
+    <footer>
+        <p><a href="/report">Reportar abuso</a> | <a href="/donate">Donar</a></p>
+        <p><a href="/terms">Términos de servicio</a> | <a href="/stats">Estadísticas</a></p>
+    </footer>
+</body>
+</html>
